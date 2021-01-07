@@ -3,7 +3,7 @@ from types import FunctionType
 from functools import lru_cache
 
 __all__ = ('lru_cache', 'cache')
-__version__ = '0.3.1'
+__version__ = '0.3.2'
 
 def cache(f):
     return lru_cache()(f)
@@ -11,7 +11,7 @@ def cache(f):
 def lru_cache(
         maxsize: Union[None, int, FunctionType, classmethod, staticmethod]=None, # NonNegativeInt
         generate_key: Optional[Callable[[Tuple, Dict], Any]]=None,
-        keep_stat:bool=True # If False cache.misses and cache.hits becomes unavailable - optimisation
+        keep_stat:bool=False # If False cache.misses and cache.hits becomes unavailable - optimisation
         ):
     from bmap import BoundSizedDict
     from types import FunctionType
@@ -70,6 +70,8 @@ def lru_cache(
                 return calculated
             else:
                 return value
+
+        wrap.__name__ = func.__name__
 
         wrap.cache = cached
 

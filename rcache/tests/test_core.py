@@ -88,7 +88,7 @@ def test_generate_key():
         def __init__(self, id):
             self.id = id
 
-        @lru_cache(generate_key = lambda self: self.id)
+        @lru_cache(generate_key = lambda self: self.id, keep_stat=True)
         @execute_once
         def foo(self):
             return 100000 * self.id
@@ -114,7 +114,7 @@ def test_stat_optimisation():
 
 def test_lru_cache():
     @inspect_max_cache_size(2)
-    @lru_cache(maxsize=2)
+    @lru_cache(maxsize=2, keep_stat=True)
     @execute_once
     def foo(a, b):
         return a + b
