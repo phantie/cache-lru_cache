@@ -1,8 +1,18 @@
-def cache(f):
+from typing import Any, Optional, Union, Callable, Tuple, Dict
+from types import FunctionType
+from functools import lru_cache
+
+__all__ = ('cache', 'lru_cache')
+__version__ = '0.3'
+
+def cache(f): # TODO fix arguments
     return lru_cache(maxsize=None)(f)
 
-def lru_cache(maxsize=None): 
-    # takes NonNegativeInt, None, FunctionType, classmethod or staticmethod
+def lru_cache(
+        maxsize: Union[None, int, FunctionType, classmethod, staticmethod]=None, # NonNegativeInt
+        generate_key: Optional[Callable[[Tuple, Dict], Any]]=None,
+        keep_stat:bool=True # If False cache.misses and cache.hits becomes unavailable - optimisation
+        ):
     from bmap import BoundSizedDict
     from types import FunctionType
 
@@ -13,9 +23,12 @@ def lru_cache(maxsize=None):
     elif any(isinstance(maxsize, t) for t in specials):
         return cache(maxsize)
 
-    class none: ...
 
     def wrap(func):
+        nonlocal generate_key
+        
+        none = object()
+
         wrapper = type(func)
         if wrapper in specials:
             if wrapper is FunctionType:
@@ -25,15 +38,40 @@ def lru_cache(maxsize=None):
         else:
             raise TypeError('unsupported descriptor', wrapper)
 
+        def custom_get(self, name, default):
+            try:
+                item = super(self.__class__, self).__getitem__(name)
+            except KeyError:
+                self.misses += 1
+                return default
+            else:
+                self.hits += 1
+                return item
+
         if maxsize is None:
-            cached = {}
+            class Cache(dict):
+                if keep_stat:
+                    misses = hits = 0
+                    get = custom_get
+
+            cached = Cache()
+
         elif isinstance(maxsize, int) and maxsize >= 0:
-            cached = BoundSizedDict(maxsize)
+            class Cache(BoundSizedDict):
+                if keep_stat:
+                    misses = hits = 0
+                    get = custom_get
+
+            cached = Cache(maxsize)
         else:
             raise ValueError('invalid argument', maxsize)
 
+        if generate_key is None:
+            def generate_key(*args, **kwargs):
+                return (args, frozenset(kwargs.items()))
+
         def wrap(*args, **kwargs):
-            key = (args, frozenset(kwargs.items()))
+            key = generate_key(*args, **kwargs)
             value = cached.get(key, none)
 
             if value is none:
@@ -42,6 +80,8 @@ def lru_cache(maxsize=None):
                 return calculated
             else:
                 return value
+
+        wrap.cache = cached
 
         if wrapper is not None:
             wrap = wrapper(wrap)

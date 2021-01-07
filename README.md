@@ -1,5 +1,5 @@
 # cache-lru_cache
-Reimplemented cache/lru_cache from functools
+Reimplemented and extended lru_cache from functools
 
 https://docs.python.org/3/library/functools.html#functools.lru_cache
 
