@@ -3,7 +3,7 @@ from types import FunctionType
 from functools import lru_cache
 
 __all__ = ('lru_cache', 'cache')
-__version__ = '0.3.2'
+__version__ = '0.3.3'
 
 def cache(f):
     return lru_cache()(f)
@@ -37,9 +37,16 @@ def lru_cache(
         else:
             raise TypeError('unsupported descriptor', wrapper)
 
-        class Cache(dict if maxsize is None else 
-                    BoundSizedDict if isinstance(maxsize, int) and maxsize >= 0 else 
-                    None):
+        class Cache(
+            dict if maxsize is None else 
+            BoundSizedDict if isinstance(maxsize, int) and maxsize >= 0 else 
+            None):
+
+            def remove(self, key):
+                try:
+                    del self[key]
+                except KeyError:
+                    pass
 
             if keep_stat:
                 misses = hits = 0
@@ -53,6 +60,8 @@ def lru_cache(
                     else:
                         self.hits += 1
                         return item
+
+            
 
         cached = Cache({} if maxsize is None else maxsize)
 
