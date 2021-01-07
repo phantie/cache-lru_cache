@@ -2,11 +2,11 @@ from typing import Any, Optional, Union, Callable, Tuple, Dict
 from types import FunctionType
 from functools import lru_cache
 
-__all__ = ('cache', 'lru_cache')
-__version__ = '0.3'
+__all__ = ('lru_cache', 'cache')
+__version__ = '0.3.1'
 
-def cache(f): # TODO fix arguments
-    return lru_cache(maxsize=None)(f)
+def cache(f):
+    return lru_cache()(f)
 
 def lru_cache(
         maxsize: Union[None, int, FunctionType, classmethod, staticmethod]=None, # NonNegativeInt
@@ -23,7 +23,6 @@ def lru_cache(
     elif any(isinstance(maxsize, t) for t in specials):
         return cache(maxsize)
 
-
     def wrap(func):
         nonlocal generate_key
         
@@ -38,33 +37,24 @@ def lru_cache(
         else:
             raise TypeError('unsupported descriptor', wrapper)
 
-        def custom_get(self, name, default):
-            try:
-                item = super(self.__class__, self).__getitem__(name)
-            except KeyError:
-                self.misses += 1
-                return default
-            else:
-                self.hits += 1
-                return item
+        class Cache(dict if maxsize is None else 
+                    BoundSizedDict if isinstance(maxsize, int) and maxsize >= 0 else 
+                    None):
 
-        if maxsize is None:
-            class Cache(dict):
-                if keep_stat:
-                    misses = hits = 0
-                    get = custom_get
+            if keep_stat:
+                misses = hits = 0
+                    
+                def get(self, name, default):
+                    try:
+                        item = super(self.__class__, self).__getitem__(name)
+                    except KeyError:
+                        self.misses += 1
+                        return default
+                    else:
+                        self.hits += 1
+                        return item
 
-            cached = Cache()
-
-        elif isinstance(maxsize, int) and maxsize >= 0:
-            class Cache(BoundSizedDict):
-                if keep_stat:
-                    misses = hits = 0
-                    get = custom_get
-
-            cached = Cache(maxsize)
-        else:
-            raise ValueError('invalid argument', maxsize)
+        cached = Cache({} if maxsize is None else maxsize)
 
         if generate_key is None:
             def generate_key(*args, **kwargs):
