@@ -1,20 +1,20 @@
-from typing import Any, Optional, Union, Callable, Tuple, Dict
+from typing import Union
 from types import FunctionType
 from functools import lru_cache
 
 __all__ = ('lru_cache', 'cache')
-__version__ = '0.3.3'
+__version__ = '0.3.4'
 
 def cache(f):
     return lru_cache()(f)
 
 def lru_cache(
-        maxsize: Union[None, int, FunctionType, classmethod, staticmethod]=None, # NonNegativeInt
-        generate_key: Optional[Callable[[Tuple, Dict], Any]]=None,
-        keep_stat:bool=False # If False cache.misses and cache.hits becomes unavailable - optimisation
+        maxsize: Union[None, "NonNegativeInt", FunctionType, classmethod, staticmethod]=None,
+        generate_key = lambda *args, **kwargs: (args, frozenset(kwargs.items())),
+        keep_stat: bool = False # If False cache.misses and cache.hits becomes unavailable - optimisation
         ):
+
     from bmap import BoundSizedDict
-    from types import FunctionType
 
     specials = {classmethod, staticmethod, FunctionType}
 
@@ -61,13 +61,7 @@ def lru_cache(
                         self.hits += 1
                         return item
 
-            
-
         cached = Cache({} if maxsize is None else maxsize)
-
-        if generate_key is None:
-            def generate_key(*args, **kwargs):
-                return (args, frozenset(kwargs.items()))
 
         def wrap(*args, **kwargs):
             key = generate_key(*args, **kwargs)
