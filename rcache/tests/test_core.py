@@ -133,3 +133,12 @@ def test_lru_cache():
         ((2, 2), frozenset()): 4,
         ((5, 5), frozenset()): 10,
     }
+
+def test_wrapped():
+    @lru_cache(keep_stat=True)
+    def foo(a: int, b: int):
+        'adds integers'
+        return a + b
+
+    assert foo.__name__ == 'foo'
+    assert foo.__doc__ == 'adds integers'
